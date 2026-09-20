@@ -9,11 +9,8 @@
     *{box-sizing:border-box}
     html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#000;color:#fff;font-family:Arial,sans-serif}
     main{position:fixed;inset:0;display:grid;place-items:center;background:#000}
-    #displayImage{width:100%;height:100%;display:none;object-fit:contain;object-position:center;background:#000}
+    #displayImage{width:100%;height:100%;display:none;object-fit:cover;object-position:center;background:#000}
     #emptyState{padding:24px;text-align:center;color:#7f8b99;font-size:16px}
-    #statusDot{position:fixed;right:12px;bottom:12px;width:9px;height:9px;border-radius:50%;background:#ffb020;box-shadow:0 0 10px currentColor;opacity:.85}
-    #statusDot.online{background:#2ee59d}
-    #statusDot.offline{background:#ff5e75}
   </style>
 </head>
 <body>
@@ -21,7 +18,6 @@
     <img id="displayImage" alt="Admin joylagan rasm">
     <div id="emptyState">Rasm kutilmoqda…</div>
   </main>
-  <span id="statusDot" aria-label="Ulanish holati"></span>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
   <script>
@@ -29,7 +25,6 @@
     firebase.initializeApp(firebaseConfig);
     const image=document.getElementById("displayImage");
     const empty=document.getElementById("emptyState");
-    const dot=document.getElementById("statusDot");
     const cacheKey="paymeDisplayCacheV1";
 
     function showItem(item){
@@ -51,10 +46,7 @@
     try{const cached=JSON.parse(localStorage.getItem(cacheKey)||"null");if(cached)showItem(cached)}catch(_){ }
     firebase.database().ref("aviator/paymeDisplay").on("value",snap=>{
       showItem(snap.val());
-      dot.className="online";
-    },()=>{dot.className="offline"});
-    window.addEventListener("online",()=>dot.className="online");
-    window.addEventListener("offline",()=>dot.className="offline");
+    });
   </script>
 </body>
 </html>
