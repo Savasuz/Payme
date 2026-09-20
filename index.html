@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <title>Payme Display</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#000;color:#fff;font-family:Arial,sans-serif}
+    main{position:fixed;inset:0;display:grid;place-items:center;background:#000}
+    #displayImage{width:100%;height:100%;display:none;object-fit:contain;object-position:center;background:#000}
+    #emptyState{padding:24px;text-align:center;color:#7f8b99;font-size:16px}
+    #statusDot{position:fixed;right:12px;bottom:12px;width:9px;height:9px;border-radius:50%;background:#ffb020;box-shadow:0 0 10px currentColor;opacity:.85}
+    #statusDot.online{background:#2ee59d}
+    #statusDot.offline{background:#ff5e75}
+  </style>
+</head>
+<body>
+  <main>
+    <img id="displayImage" alt="Admin joylagan rasm">
+    <div id="emptyState">Rasm kutilmoqda…</div>
+  </main>
+  <span id="statusDot" aria-label="Ulanish holati"></span>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig={apiKey:"AIzaSyDbsMB4jg3l0SXd94S9G_Ezx1xHbcmyB74",authDomain:"sunetuz-aviator-admin.firebaseapp.com",databaseURL:"https://sunetuz-aviator-admin-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"sunetuz-aviator-admin",storageBucket:"sunetuz-aviator-admin.firebasestorage.app",messagingSenderId:"841012045957",appId:"1:841012045957:web:39849ffa5ec5436cac21ec"};
+    firebase.initializeApp(firebaseConfig);
+    const image=document.getElementById("displayImage");
+    const empty=document.getElementById("emptyState");
+    const dot=document.getElementById("statusDot");
+    const cacheKey="paymeDisplayCacheV1";
+
+    function showItem(item){
+      const src=String(item&&item.dataUrl||"");
+      if(!src.startsWith("data:image/")){
+        image.removeAttribute("src");
+        image.style.display="none";
+        empty.style.display="block";
+        empty.textContent="Hozircha rasm joylanmagan";
+        localStorage.removeItem(cacheKey);
+        return;
+      }
+      image.onload=()=>{image.style.display="block";empty.style.display="none"};
+      image.onerror=()=>{image.style.display="none";empty.style.display="block";empty.textContent="Rasm ochilmadi"};
+      image.src=src;
+      try{localStorage.setItem(cacheKey,JSON.stringify(item))}catch(_){ }
+    }
+
+    try{const cached=JSON.parse(localStorage.getItem(cacheKey)||"null");if(cached)showItem(cached)}catch(_){ }
+    firebase.database().ref("aviator/paymeDisplay").on("value",snap=>{
+      showItem(snap.val());
+      dot.className="online";
+    },()=>{dot.className="offline"});
+    window.addEventListener("online",()=>dot.className="online");
+    window.addEventListener("offline",()=>dot.className="offline");
+  </script>
+</body>
+</html>

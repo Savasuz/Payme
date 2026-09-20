@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07101f">
+  <title>Payme — Admin</title>
+  <style>
+    :root{color-scheme:dark;--cyan:#35d8ff;--violet:#665cff;--green:#35e39a;--red:#ff5d75}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{min-height:100%;margin:0;background:#030711;color:#f7faff;font-family:Arial,sans-serif}
+    body{padding:20px;display:grid;justify-items:center;align-items:start;background:radial-gradient(circle at 50% 0,#152c55 0,transparent 40%),#030711}
+    .card{width:min(100%,460px);margin:auto;padding:22px;border:1px solid rgba(83,166,255,.3);border-radius:28px;background:linear-gradient(150deg,rgba(13,31,57,.97),rgba(4,10,22,.98));box-shadow:0 24px 70px rgba(0,0,0,.52)}
+    h1{margin:0;text-align:center;font-size:28px;background:linear-gradient(90deg,#fff,#6ddcff);-webkit-background-clip:text;color:transparent}
+    .sub{margin:7px 0 22px;text-align:center;color:#9eafc5}
+    label{display:block;margin:15px 2px 8px;color:#cad7e9;font-weight:800}
+    input{width:100%;padding:15px;border:1px solid rgba(95,177,255,.28);border-radius:17px;background:#050e1d;color:#fff;font-size:17px;outline:none}
+    input:focus{border-color:var(--cyan);box-shadow:0 0 0 4px rgba(53,216,255,.09)}
+    button,.file-label{width:100%;min-height:52px;margin-top:14px;border:0;border-radius:18px;display:flex;align-items:center;justify-content:center;padding:13px 16px;color:#fff;font-size:17px;font-weight:800;background:linear-gradient(90deg,var(--cyan),var(--violet));cursor:pointer;text-align:center}
+    button:disabled{opacity:.5;cursor:wait}.hidden{display:none!important}
+    .file-label{background:#10213a;border:1px dashed rgba(105,199,255,.5)}
+    #fileInput{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+    .preview{margin-top:16px;min-height:230px;border-radius:20px;display:grid;place-items:center;overflow:hidden;background:#000;border:1px solid rgba(95,177,255,.2)}
+    .preview img{width:100%;height:260px;display:none;object-fit:contain;background:#000}
+    .preview span{padding:18px;color:#71839a;text-align:center}
+    .meta{margin:10px 2px 0;color:#8fa2bb;font-size:13px;text-align:center;overflow-wrap:anywhere}
+    .status{min-height:23px;margin:13px 0 0;text-align:center;color:#aab9cc}.status.ok{color:var(--green)}.status.err{color:var(--red)}
+    .danger{background:rgba(255,93,117,.12);border:1px solid rgba(255,93,117,.4);color:#ff93a4}
+    .secondary{background:#14213a}
+    .progress{height:8px;margin-top:14px;border-radius:999px;overflow:hidden;background:#071120}
+    .progress span{display:block;width:0;height:100%;background:linear-gradient(90deg,var(--cyan),var(--violet));transition:width .2s}
+    @media(max-width:480px){body{padding:12px}.card{padding:18px;border-radius:24px}.preview{min-height:200px}.preview img{height:230px}}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>PAYME ADMIN</h1>
+    <p class="sub">To‘liq ekran rasmini boshqarish</p>
+    <section id="loginBox">
+      <label for="password">Maxsus parol</label>
+      <input id="password" type="password" autocomplete="current-password" placeholder="Parolni kiriting">
+      <p class="meta">Bir marta kirsangiz, ushbu qurilmada kirish saqlanadi.</p>
+      <button id="loginBtn" type="button">Kirish</button>
+      <p id="loginStatus" class="status"></p>
+    </section>
+    <section id="adminBox" class="hidden">
+      <div class="preview">
+        <img id="previewImage" alt="Tanlangan rasm">
+        <span id="previewEmpty">Hozircha rasm tanlanmagan</span>
+      </div>
+      <p id="currentInfo" class="meta">Joriy rasm tekshirilmoqda…</p>
+      <label class="file-label" for="fileInput">🖼 Rasm tanlash</label>
+      <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp">
+      <p class="meta">JPG, PNG yoki WEBP. Rasm avtomatik siqiladi.</p>
+      <div class="progress"><span id="progressBar"></span></div>
+      <button id="publishBtn" type="button" disabled>Hammaga ko‘rsatish</button>
+      <button id="deleteBtn" class="danger" type="button" disabled>Joriy rasmni o‘chirish</button>
+      <button id="logoutBtn" class="secondary" type="button">Chiqish</button>
+      <p id="adminStatus" class="status"></p>
+    </section>
+  </main>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script>
+    const ADMIN_EMAIL="rubekdeveloper@gmail.com";
+    const firebaseConfig={apiKey:"AIzaSyDbsMB4jg3l0SXd94S9G_Ezx1xHbcmyB74",authDomain:"sunetuz-aviator-admin.firebaseapp.com",databaseURL:"https://sunetuz-aviator-admin-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"sunetuz-aviator-admin",storageBucket:"sunetuz-aviator-admin.firebasestorage.app",messagingSenderId:"841012045957",appId:"1:841012045957:web:39849ffa5ec5436cac21ec"};
+    firebase.initializeApp(firebaseConfig);
+    const auth=firebase.auth(),db=firebase.database(),ref=db.ref("aviator/paymeDisplay");
+    const authReady=auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+    const $=id=>document.getElementById(id);
+    let prepared=null,currentExists=false;
+    function status(message,tone=""){const el=$("adminStatus");el.textContent=message;el.className="status "+tone}
+    function loginStatus(message,tone=""){const el=$("loginStatus");el.textContent=message;el.className="status "+tone}
+    function showPreview(src){$("previewImage").src=src;$("previewImage").style.display="block";$("previewEmpty").style.display="none"}
+    function clearPreview(){$("previewImage").removeAttribute("src");$("previewImage").style.display="none";$("previewEmpty").style.display="block"}
+
+    auth.onAuthStateChanged(user=>{
+      const ok=Boolean(user&&user.email===ADMIN_EMAIL);
+      $("loginBox").classList.toggle("hidden",ok);$("adminBox").classList.toggle("hidden",!ok);
+      if(!ok&&user)auth.signOut();
+    });
+    $("loginBtn").onclick=async()=>{
+      const password=$("password").value;if(!password){loginStatus("Parolni kiriting","err");return}
+      $("loginBtn").disabled=true;loginStatus("Tekshirilmoqda…");
+      try{await authReady;await auth.signInWithEmailAndPassword(ADMIN_EMAIL,password);$("password").value="";loginStatus("Kirish muvaffaqiyatli","ok")}
+      catch(_){loginStatus("Parol noto‘g‘ri yoki ulanishda xato","err")}
+      $("loginBtn").disabled=false;
+    };
+    $("password").addEventListener("keydown",e=>{if(e.key==="Enter")$("loginBtn").click()});
+    $("logoutBtn").onclick=()=>auth.signOut();
+
+    ref.on("value",snap=>{
+      const item=snap.val();currentExists=Boolean(item&&String(item.dataUrl||"").startsWith("data:image/"));
+      $("deleteBtn").disabled=!currentExists;
+      $("currentInfo").textContent=currentExists?"Joriy rasm: "+(item.name||"rasm")+" · "+new Date(Number(item.updatedAt)||Date.now()).toLocaleString("uz-UZ"):"Hozircha rasm joylanmagan";
+      if(currentExists&&!prepared)showPreview(item.dataUrl);else if(!currentExists&&!prepared)clearPreview();
+    });
+
+    async function compressImage(file){
+      const bitmap=await createImageBitmap(file);let width=bitmap.width,height=bitmap.height;
+      const maxSide=1920,ratio=Math.min(1,maxSide/Math.max(width,height));width=Math.round(width*ratio);height=Math.round(height*ratio);
+      let quality=.88,blob;
+      for(let pass=0;pass<4;pass++){
+        const canvas=document.createElement("canvas");canvas.width=width;canvas.height=height;
+        canvas.getContext("2d",{alpha:false}).drawImage(bitmap,0,0,width,height);
+        blob=await new Promise(resolve=>canvas.toBlob(resolve,"image/webp",quality));
+        if(blob&&blob.size<=1500000)break;
+        width=Math.round(width*.82);height=Math.round(height*.82);quality=Math.max(.68,quality-.07);
+      }
+      bitmap.close();if(!blob)throw new Error("compress");
+      const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});
+      return{dataUrl,width,height,size:blob.size};
+    }
+
+    $("fileInput").onchange=async event=>{
+      const file=event.target.files&&event.target.files[0];prepared=null;$("publishBtn").disabled=true;
+      if(!file)return;
+      if(!["image/jpeg","image/png","image/webp"].includes(file.type)){status("Faqat JPG, PNG yoki WEBP rasm tanlang","err");return}
+      if(file.size>15*1024*1024){status("Rasm 15 MB dan katta bo‘lmasin","err");return}
+      status("Rasm tayyorlanmoqda…");$("progressBar").style.width="35%";
+      try{prepared=await compressImage(file);prepared.name=file.name;showPreview(prepared.dataUrl);$("publishBtn").disabled=false;$("progressBar").style.width="100%";status("Rasm tayyor. Hammaga ko‘rsatish tugmasini bosing.","ok")}
+      catch(_){$("progressBar").style.width="0";status("Rasmni tayyorlab bo‘lmadi","err")}
+    };
+
+    $("publishBtn").onclick=async()=>{
+      if(!prepared)return;$("publishBtn").disabled=true;status("Yuborilmoqda…");$("progressBar").style.width="55%";
+      try{await ref.set({...prepared,updatedAt:firebase.database.ServerValue.TIMESTAMP});prepared=null;$("fileInput").value="";$("progressBar").style.width="100%";status("Rasm barcha ekranlarda yangilandi","ok")}
+      catch(_){$("publishBtn").disabled=false;$("progressBar").style.width="0";status("Rasm yuborilmadi. Internetni tekshiring","err")}
+    };
+    $("deleteBtn").onclick=async()=>{
+      if(!currentExists||!confirm("Joriy rasm barcha ekranlardan o‘chirilsinmi?"))return;
+      $("deleteBtn").disabled=true;status("O‘chirilmoqda…");
+      try{await ref.remove();prepared=null;clearPreview();status("Rasm barcha ekranlardan o‘chirildi","ok")}
+      catch(_){$("deleteBtn").disabled=false;status("Rasm o‘chirilmadi","err")}
+    };
+  </script>
+</body>
+</html>
